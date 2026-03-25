@@ -36,7 +36,6 @@ medilink/
 4. Under **Network Access** → Add IP `0.0.0.0/0` (allow all) or your specific IP.
 5. Click **Connect** → **Connect your application** → Copy the connection string:
    ```
-   mongodb+srv://<username>:<password>@cluster0.xxxxx.mongodb.net/medilink?retryWrites=true&w=majority
    ```
 6. Paste this URI into `backend/.env` as `MONGO_URI`.
 
@@ -52,7 +51,7 @@ npm install
 Create `.env` file:
 ```env
 PORT=5000
-MONGO_URI=mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/medilink?retryWrites=true&w=majority
+MONGO_URI=
 JWT_SECRET=your_super_secret_jwt_key_here
 JWT_EXPIRES_IN=7d
 AI_SERVICE_URL=http://localhost:8000
