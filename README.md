@@ -145,4 +145,4 @@ Default: `admin@medilink.lk` / `Admin@123`
 
 ## 📝 License
 
-MIT License — MediLink 2024
+Janidu kalhara License — MediLink 2026
