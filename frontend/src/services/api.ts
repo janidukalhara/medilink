@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// FIX: Single axios instance — removed duplicate in utils/api.ts
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   withCredentials: true,
@@ -14,9 +15,14 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    // FIX: Handle both expired and invalid token responses
     if (err.response?.status === 401) {
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      const errorMsg = err.response?.data?.error || '';
+      // Only redirect if it's truly an auth error, not a 401 from a specific resource
+      if (errorMsg === 'Token expired' || errorMsg === 'Invalid token' || errorMsg === 'Not authenticated') {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(err);
   }
@@ -49,6 +55,7 @@ export const quotationAPI = {
   accept: (id: string) => api.put(`/quotations/${id}/accept`),
   updateStatus: (id: string, status: string, data?: any) => api.put(`/quotations/${id}/order-status`, { status, ...data }),
   complete: (id: string) => api.put(`/quotations/${id}/complete`),
+  changeFulfillment: (id: string, fulfillmentType: 'delivery' | 'pickup') => api.put(`/quotations/${id}/fulfillment`, { fulfillmentType }),
 };
 
 export const pharmacyAPI = {
@@ -76,9 +83,13 @@ export const notificationAPI = {
 export const adminAPI = {
   getDashboard: () => api.get('/admin/dashboard'),
   getPendingPharmacies: () => api.get('/admin/pharmacies/pending'),
+  getAllPharmacies: (params?: any) => api.get('/admin/pharmacies', { params }),
   approvePharmacy: (id: string) => api.put(`/admin/pharmacies/${id}/approve`),
   rejectPharmacy: (id: string) => api.put(`/admin/pharmacies/${id}/reject`),
+  updatePharmacy: (id: string, data: any) => api.put(`/admin/pharmacies/${id}`, data),
+  deletePharmacy: (id: string) => api.delete(`/admin/pharmacies/${id}`),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
+  getUserById: (id: string) => api.get(`/admin/users/${id}`),
   toggleUser: (id: string) => api.put(`/admin/users/${id}/toggle`),
 };
 

@@ -13,8 +13,14 @@ exports.getPendingPharmacies = async (req, res) => {
 exports.approvePharmacy = async (req, res) => {
   try {
     const { id } = req.params;
-    const pharmacy = await User.findByIdAndUpdate(id, { isApproved: true, isActive: true }, { new: true });
+
+    // FIX: Verify it's actually a pharmacy, not an arbitrary user
+    const pharmacy = await User.findOne({ _id: id, role: 'pharmacy' });
     if (!pharmacy) return res.status(404).json({ error: 'Pharmacy not found' });
+
+    pharmacy.isApproved = true;
+    pharmacy.isActive = true;
+    await pharmacy.save();
 
     await Notification.create({
       recipient: pharmacy._id,
@@ -31,19 +37,44 @@ exports.approvePharmacy = async (req, res) => {
 
 exports.rejectPharmacy = async (req, res) => {
   try {
-    const pharmacy = await User.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+    // FIX: Verify it's a pharmacy before deactivating
+    const pharmacy = await User.findOne({ _id: req.params.id, role: 'pharmacy' });
+    if (!pharmacy) return res.status(404).json({ error: 'Pharmacy not found' });
+
+    pharmacy.isActive = false;
+    await pharmacy.save();
+
     res.json({ message: 'Pharmacy rejected', pharmacy });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const { role, page = 1, limit = 20 } = req.query;
+    const { role, page = 1, limit = 20, search } = req.query;
     const query = {};
-    if (role) query.role = role;
+
+    // FIX: Validate role filter to prevent arbitrary query injection
+    if (role) {
+      if (!['patient', 'pharmacy', 'admin'].includes(role)) {
+        return res.status(400).json({ error: 'Invalid role filter' });
+      }
+      query.role = role;
+    }
+
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
     const total = await User.countDocuments(query);
-    const users = await User.find(query).sort({ createdAt: -1 }).skip((page-1)*limit).limit(Number(limit));
-    res.json({ users, total, pages: Math.ceil(total/limit) });
+    const users = await User.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    res.json({ users, total, pages: Math.ceil(total / limit) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
@@ -51,6 +82,12 @@ exports.toggleUserStatus = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // FIX: Prevent admin from deactivating their own account
+    if (user._id.toString() === req.user._id.toString()) {
+      return res.status(400).json({ error: 'Cannot deactivate your own account' });
+    }
+
     user.isActive = !user.isActive;
     await user.save();
     res.json({ message: `User ${user.isActive ? 'activated' : 'deactivated'}`, user });
@@ -73,19 +110,18 @@ exports.getDashboardStats = async (req, res) => {
       User.countDocuments({ role: 'pharmacy', isApproved: true }),
       User.countDocuments({ role: 'pharmacy', isApproved: false }),
       Prescription.countDocuments(),
-      Prescription.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0,0,0,0)) } }),
+      Prescription.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
       Prescription.countDocuments({ status: 'failed' }),
-      Quotation.countDocuments({ status: 'submitted' }),
-      Quotation.countDocuments({ status: 'accepted' }),
+      // FIX: Use orderStatus (the canonical field) instead of legacy status
+      Quotation.countDocuments({ orderStatus: 'submitted' }),
+      Quotation.countDocuments({ orderStatus: 'accepted' }),
     ]);
 
-    // Average OCR confidence
     const ocrStats = await Prescription.aggregate([
       { $match: { ocrConfidence: { $gt: 0 } } },
       { $group: { _id: null, avgConfidence: { $avg: '$ocrConfidence' }, count: { $sum: 1 } } },
     ]);
 
-    // Recent prescriptions by day (last 7 days)
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const prescriptionsByDay = await Prescription.aggregate([
       { $match: { createdAt: { $gte: sevenDaysAgo } } },
@@ -107,5 +143,64 @@ exports.getDashboardStats = async (req, res) => {
       },
       prescriptionsByDay,
     });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ─── Update pharmacy details ───────────────────────────────────────────────────
+exports.updatePharmacy = async (req, res) => {
+  try {
+    const updates = { ...req.body };
+    // Strip security-sensitive fields — admin can update profile details only
+    delete updates.password;
+    delete updates.role;
+    delete updates.refreshToken;
+
+    const pharmacy = await User.findOneAndUpdate(
+      { _id: req.params.id, role: 'pharmacy' },
+      updates,
+      { new: true }
+    );
+    if (!pharmacy) return res.status(404).json({ error: 'Pharmacy not found' });
+    res.json({ message: 'Pharmacy updated', pharmacy });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ─── Delete pharmacy ───────────────────────────────────────────────────────────
+exports.deletePharmacy = async (req, res) => {
+  try {
+    const pharmacy = await User.findOneAndDelete({ _id: req.params.id, role: 'pharmacy' });
+    if (!pharmacy) return res.status(404).json({ error: 'Pharmacy not found' });
+    res.json({ message: 'Pharmacy deleted successfully' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ─── Get single user details ───────────────────────────────────────────────────
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -refreshToken');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ─── Get all approved pharmacies ───────────────────────────────────────────────
+exports.getAllPharmacies = async (req, res) => {
+  try {
+    const { page = 1, limit = 20, search } = req.query;
+    const query = { role: 'pharmacy' };
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { 'pharmacyProfile.district': { $regex: search, $options: 'i' } },
+        { 'pharmacyProfile.licenseNumber': { $regex: search, $options: 'i' } },
+      ];
+    }
+    const total = await User.countDocuments(query);
+    const pharmacies = await User.find(query)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+    res.json({ pharmacies, total, pages: Math.ceil(total / limit) });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };

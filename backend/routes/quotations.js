@@ -2,7 +2,7 @@ const router = require('express').Router();
 const { protect, authorize, requireApproved } = require('../middleware/auth');
 const {
   getPharmacyRequests, getPharmacyQuotationById, submitQuotation,
-  getPrescriptionQuotations, acceptQuotation,
+  getPrescriptionQuotations, acceptQuotation, changeFulfillmentType,
   updateOrderStatus, patientCompleteOrder,
 } = require('../controllers/quotationController');
 
@@ -17,6 +17,7 @@ router.put('/:id/order-status',    authorize('pharmacy'), requireApproved, updat
 // Patient
 router.get('/prescription/:prescriptionId', authorize('patient'), getPrescriptionQuotations);
 router.put('/:id/accept',                   authorize('patient'), acceptQuotation);
+router.put('/:id/fulfillment',              authorize('patient'), changeFulfillmentType);
 router.put('/:id/complete',                 authorize('patient'), patientCompleteOrder);
 
 module.exports = router;

@@ -28,7 +28,6 @@ function AppLayout({ navItems, accentColor = 'bg-primary-600' }: { navItems: any
   const navigate = useNavigate()
 
   const handleLogout = async () => {
-    try { await api.post('/auth/logout') } catch {}
     logout()
     navigate('/login')
     toast.success('Logged out')

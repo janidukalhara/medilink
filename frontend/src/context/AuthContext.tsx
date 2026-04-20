@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authAPI } from '../services/api';
+import api, { authAPI } from '../services/api';
 
 interface User {
   _id: string;
@@ -36,9 +36,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
           const { data } = await authAPI.getMe();
           setUser(data.user);
+          setToken(savedToken);
         } catch {
+          // FIX: Clear stale token on auth failure
           localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
         }
       }
       setLoading(false);

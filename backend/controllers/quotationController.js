@@ -4,17 +4,34 @@ const Notification = require('../models/Notification');
 const User         = require('../models/User');
 const { sendEmail, quotationReceivedTemplate } = require('../utils/email');
 
-// ─── Helper: build query that works for BOTH old (status) and new (orderStatus) docs ─
+// ─── Helper ───────────────────────────────────────────────────────────────────
 function buildStatusQuery(pharmacyId, status) {
   if (status === 'all') return { pharmacy: pharmacyId };
   return {
     pharmacy: pharmacyId,
     $or: [
       { orderStatus: status },
-      // Legacy support: old docs only had 'status' field
       { status: status, orderStatus: { $exists: false } },
     ],
   };
+}
+
+// ─── Notify pharmacy their quote was rejected ─────────────────────────────────
+async function notifyPharmacyRejected(quotation, io) {
+  if (io) {
+    io.to(`user_${quotation.pharmacy}`).emit('quotation_rejected', {
+      quotationId:    quotation._id,
+      prescriptionId: quotation.prescription,
+      message:        'Your quotation was not selected by the patient.',
+    });
+  }
+  await Notification.create({
+    recipient: quotation.pharmacy,
+    type:      'quote_rejected',
+    title:     '❌ Quotation Not Selected',
+    message:   'The patient selected another pharmacy for this prescription.',
+    data:      { quotationId: quotation._id, prescriptionId: quotation.prescription },
+  });
 }
 
 // ─── Pharmacy: get their requests ─────────────────────────────────────────────
@@ -31,12 +48,9 @@ exports.getPharmacyRequests = async (req, res) => {
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
-    // Normalise: ensure every doc exposes orderStatus for frontend
     const normalised = quotations.map(q => {
       const obj = q.toObject();
-      if (!obj.orderStatus && obj.status) {
-        obj.orderStatus = obj.status; // legacy fallback
-      }
+      if (!obj.orderStatus && obj.status) obj.orderStatus = obj.status;
       return obj;
     });
 
@@ -54,7 +68,6 @@ exports.getPharmacyQuotationById = async (req, res) => {
 
     const obj = q.toObject();
     if (!obj.orderStatus && obj.status) obj.orderStatus = obj.status;
-
     res.json({ quotation: obj });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
@@ -70,19 +83,20 @@ exports.submitQuotation = async (req, res) => {
     if (currentStatus === 'accepted') return res.status(400).json({ error: 'Already accepted' });
 
     const subtotal = items.reduce((s, i) => s + (i.available ? Number(i.totalPrice || 0) : 0), 0);
+    const effectiveDeliveryFee = fulfillmentType === 'pickup' ? 0 : (deliveryFee || 0);
 
-    // Set both fields for compatibility
-    quotation.orderStatus        = 'submitted';
-    quotation.status             = 'submitted'; // keep old field in sync
-    quotation.items              = items;
-    quotation.subtotal           = subtotal;
-    quotation.deliveryFee        = deliveryFee || 0;
-    quotation.totalAmount        = subtotal + (deliveryFee || 0);
+    quotation.orderStatus         = 'submitted';
+    quotation.status              = 'submitted';
+    quotation.items               = items;
+    quotation.subtotal            = subtotal;
+    quotation.deliveryFee         = effectiveDeliveryFee;
+    quotation.totalAmount         = subtotal + effectiveDeliveryFee;
     quotation.isDeliveryAvailable = isDeliveryAvailable || false;
-    quotation.fulfillmentType    = fulfillmentType || 'delivery';
-    quotation.estimatedTime      = estimatedTime;
-    quotation.notes              = notes;
-    quotation.validUntil         = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    // FIX: Store both delivery and pickup options properly
+    quotation.fulfillmentType     = fulfillmentType || (isDeliveryAvailable ? 'delivery' : 'pickup');
+    quotation.estimatedTime       = estimatedTime;
+    quotation.notes               = notes;
+    quotation.validUntil          = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await quotation.save();
 
     await Prescription.findByIdAndUpdate(quotation.prescription, { status: 'quotes_received' });
@@ -133,7 +147,6 @@ exports.getPrescriptionQuotations = async (req, res) => {
       .populate('pharmacy', 'name email phone pharmacyProfile')
       .sort({ totalAmount: 1 });
 
-    // Normalise orderStatus
     const normalised = quotations.map(q => {
       const obj = q.toObject();
       if (!obj.orderStatus && obj.status) obj.orderStatus = obj.status;
@@ -160,12 +173,21 @@ exports.acceptQuotation = async (req, res) => {
     quotation.acceptedAt  = new Date();
     await quotation.save();
 
-    // Reject all other submitted quotes
-    await Quotation.updateMany(
-      { prescription: quotation.prescription, _id: { $ne: quotation._id },
-        $or: [{ orderStatus: 'submitted' }, { status: 'submitted' }] },
-      { orderStatus: 'rejected', status: 'rejected', rejectedAt: new Date() }
-    );
+    // FIX: Auto-reject all other submitted quotes and notify each pharmacy
+    const othersToReject = await Quotation.find({
+      prescription: quotation.prescription,
+      _id: { $ne: quotation._id },
+      $or: [{ orderStatus: 'submitted' }, { status: 'submitted' }],
+    });
+
+    for (const other of othersToReject) {
+      other.orderStatus = 'rejected';
+      other.status      = 'rejected';
+      other.rejectedAt  = new Date();
+      await other.save();
+      // FIX: Notify each rejected pharmacy via socket + in-app notification
+      await notifyPharmacyRejected(other, req.io);
+    }
 
     await Prescription.findByIdAndUpdate(quotation.prescription, {
       status:            'accepted',
@@ -190,6 +212,73 @@ exports.acceptQuotation = async (req, res) => {
     });
 
     res.json({ message: 'Quotation accepted', quotation });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+};
+
+// ─── Patient: change fulfillment type (delivery → pickup or pickup → delivery) ─
+exports.changeFulfillmentType = async (req, res) => {
+  try {
+    const { fulfillmentType } = req.body;
+    if (!['delivery', 'pickup'].includes(fulfillmentType)) {
+      return res.status(400).json({ error: 'fulfillmentType must be delivery or pickup' });
+    }
+
+    const quotation = await Quotation.findOne({ _id: req.params.id, patient: req.user._id })
+      .populate('pharmacy', 'name pharmacyProfile');
+    if (!quotation) return res.status(404).json({ error: 'Not found' });
+
+    const currentStatus = quotation.orderStatus || quotation.status;
+    if (!['accepted', 'confirmed'].includes(currentStatus)) {
+      return res.status(400).json({ error: `Cannot change fulfillment in status: ${currentStatus}` });
+    }
+
+    // If switching to pickup: remove delivery fee
+    const previousType = quotation.fulfillmentType;
+    // Fallback: some old documents may have subtotal=0 but totalAmount is correct
+    const subtotal = quotation.subtotal > 0
+      ? quotation.subtotal
+      : (quotation.totalAmount || 0) - (quotation.deliveryFee || 0);
+    const newDeliveryFee = fulfillmentType === 'pickup' ? 0 : (quotation.deliveryFee || 0);
+    const newTotal = subtotal + newDeliveryFee;
+
+    quotation.fulfillmentType = fulfillmentType;
+    quotation.deliveryFee     = newDeliveryFee;
+    quotation.subtotal        = subtotal;
+    quotation.totalAmount     = newTotal;
+    await quotation.save();
+
+    // Update prescription fulfillment type too
+    await Prescription.findByIdAndUpdate(quotation.prescription, { fulfillmentType });
+
+    // Notify pharmacy of the change
+    if (req.io) {
+      req.io.to(`user_${quotation.pharmacy._id}`).emit('fulfillment_changed', {
+        quotationId:     quotation._id,
+        prescriptionId:  quotation.prescription,
+        fulfillmentType,
+        previousType,
+        newTotal,
+        patientName:     req.user.name,
+      });
+    }
+
+    await Notification.create({
+      recipient: quotation.pharmacy._id,
+      type:      'fulfillment_changed',
+      title:     fulfillmentType === 'pickup' ? '🏪 Patient Will Pick Up' : '🚚 Patient Wants Delivery',
+      message:   fulfillmentType === 'pickup'
+        ? `${req.user.name} changed to pickup. Delivery fee removed. New total: LKR ${newTotal.toFixed(2)}.`
+        : `${req.user.name} changed to delivery. New total: LKR ${newTotal.toFixed(2)}.`,
+      data: { quotationId: quotation._id, prescriptionId: quotation.prescription },
+    });
+
+    res.json({
+      message: `Fulfillment changed to ${fulfillmentType}`,
+      quotation,
+      savings: previousType === 'delivery' && fulfillmentType === 'pickup'
+        ? (quotation.deliveryFee || 0)
+        : 0,
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 };
 
@@ -251,27 +340,18 @@ exports.updateOrderStatus = async (req, res) => {
     await quotation.save();
 
     const PRESCRIPTION_MAP = {
-      confirmed:    'confirmed',
-      preparing:    'preparing',
-      dispatched:   'dispatched',
-      delivered:    'delivered',
-      pickup_ready: 'pickup_ready',
-      picked_up:    'delivered',
+      confirmed: 'confirmed', preparing: 'preparing', dispatched: 'dispatched',
+      delivered: 'delivered', pickup_ready: 'pickup_ready', picked_up: 'delivered',
     };
-
     await Prescription.findByIdAndUpdate(quotation.prescription, {
       status: PRESCRIPTION_MAP[status] || status,
     });
 
     const LABELS = {
-      confirmed:    '📦 Order Confirmed',
-      preparing:    '🧴 Preparing Your Medicines',
-      dispatched:   '🚚 Out for Delivery',
-      delivered:    '🚪 Delivered',
-      pickup_ready: '🏪 Ready for Pickup',
-      picked_up:    '✅ Medicines Picked Up',
+      confirmed:    '📦 Order Confirmed',    preparing:    '🧴 Preparing Your Medicines',
+      dispatched:   '🚚 Out for Delivery',   delivered:    '🚪 Delivered',
+      pickup_ready: '🏪 Ready for Pickup',   picked_up:    '✅ Medicines Picked Up',
     };
-
     const MESSAGES = {
       confirmed:    'Your order has been confirmed by the pharmacy.',
       preparing:    'The pharmacy is now preparing your medicines.',
@@ -293,7 +373,7 @@ exports.updateOrderStatus = async (req, res) => {
     await Notification.create({
       recipient: quotation.patient,
       type:      `order_${status}`,
-      title:     LABELS[status]   || status,
+      title:     LABELS[status] || status,
       message:   MESSAGES[status] || `Order status: ${status}`,
       data:      { prescriptionId: quotation.prescription, quotationId: quotation._id },
     });

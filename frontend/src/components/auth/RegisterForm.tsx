@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Eye, EyeOff, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../services/api';
-import { PROVINCES, DISTRICTS, getGNDivisions } from '../../utils/sriLanka';
+import LocationPicker from '../common/LocationPicker';
 
 type Role = 'patient' | 'pharmacy';
 
@@ -12,24 +12,37 @@ export default function RegisterForm() {
   const [role, setRole] = useState<Role>('patient');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [selectedProvince, setSelectedProvince] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState('');
 
   const [form, setForm] = useState({
     name: '', email: '', password: '', phone: '',
     // patient
-    dateOfBirth: '', gender: '', address: '',
+    dateOfBirth: '', gender: '',
     // pharmacy
     licenseNumber: '', registrationNumber: '',
     openHours: '', isDeliveryAvailable: false, description: '',
-    // shared location
-    province: '', district: '', gnDivisionName: '', gnDivisionCode: '',
   });
+
+  // Location state — set by LocationPicker
+  const [locationData, setLocationData] = useState({
+    address: '',
+    lat: 0,
+    lng: 0,
+    district: '',
+    province: '',
+  });
+
+  // GN division — still manual since Nominatim doesn't return GN codes
+  const [gnDivisionName, setGnDivisionName] = useState('');
+  const [gnDivisionCode, setGnDivisionCode] = useState('');
 
   const set = (field: string, value: any) => setForm(p => ({ ...p, [field]: value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!locationData.address) {
+      toast.error('Please select your address using the location picker');
+      return;
+    }
     setLoading(true);
     try {
       const payload: any = {
@@ -38,32 +51,43 @@ export default function RegisterForm() {
       };
 
       const location = {
-        address: form.address, district: form.district, province: form.province,
-        gramaNiladhari: { divisionName: form.gnDivisionName, divisionCode: form.gnDivisionCode },
+        address: locationData.address,
+        district: locationData.district,
+        province: locationData.province,
+        gramaNiladhari: { divisionName: gnDivisionName, divisionCode: gnDivisionCode },
       };
 
       if (role === 'patient') {
         payload.patientProfile = {
-          dateOfBirth: form.dateOfBirth, gender: form.gender, ...location,
+          dateOfBirth: form.dateOfBirth,
+          gender: form.gender,
+          ...location,
         };
       } else {
         payload.pharmacyProfile = {
-          licenseNumber: form.licenseNumber, registrationNumber: form.registrationNumber,
-          openHours: form.openHours, isDeliveryAvailable: form.isDeliveryAvailable,
-          description: form.description, ...location,
+          licenseNumber: form.licenseNumber,
+          registrationNumber: form.registrationNumber,
+          openHours: form.openHours,
+          isDeliveryAvailable: form.isDeliveryAvailable,
+          description: form.description,
+          ...location,
+          // Store GPS coords for geo queries
+          location: {
+            type: 'Point',
+            coordinates: [locationData.lng, locationData.lat],
+          },
         };
       }
 
       await authAPI.register(payload);
-      toast.success(role === 'pharmacy' ? 'Registration successful! Awaiting admin approval.' : 'Registration successful!');
+      toast.success(role === 'pharmacy'
+        ? 'Registration successful! Awaiting admin approval.'
+        : 'Registration successful!');
       navigate('/login');
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Registration failed');
     } finally { setLoading(false); }
   };
-
-  const districts = selectedProvince ? DISTRICTS[selectedProvince] || [] : [];
-  const gnDivisions = selectedDistrict ? getGNDivisions(selectedDistrict) : [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 to-teal-50 flex items-center justify-center p-4">
@@ -88,7 +112,8 @@ export default function RegisterForm() {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
@@ -105,7 +130,8 @@ export default function RegisterForm() {
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
               <div className="relative">
-                <input className="input pr-10" type={showPass ? 'text' : 'password'} required minLength={6} value={form.password} onChange={e => set('password', e.target.value)} placeholder="Min 6 characters" />
+                <input className="input pr-10" type={showPass ? 'text' : 'password'} required minLength={6}
+                  value={form.password} onChange={e => set('password', e.target.value)} placeholder="Min 6 characters" />
                 <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5">
                   {showPass ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                 </button>
@@ -147,50 +173,61 @@ export default function RegisterForm() {
                 <input className="input" value={form.openHours} onChange={e => set('openHours', e.target.value)} placeholder="8:00 AM - 10:00 PM" />
               </div>
               <div className="flex items-center gap-2 pt-5">
-                <input type="checkbox" id="delivery" checked={form.isDeliveryAvailable} onChange={e => set('isDeliveryAvailable', e.target.checked)} className="w-4 h-4 rounded" />
+                <input type="checkbox" id="delivery" checked={form.isDeliveryAvailable}
+                  onChange={e => set('isDeliveryAvailable', e.target.checked)} className="w-4 h-4 rounded" />
                 <label htmlFor="delivery" className="text-sm text-gray-700">Delivery Available</label>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <textarea className="input resize-none" rows={2} value={form.description}
+                  onChange={e => set('description', e.target.value)} placeholder="Brief description of your pharmacy..." />
               </div>
             </div>
           )}
 
-          {/* Location */}
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-semibold text-gray-700 mb-3">📍 Location (Sri Lanka)</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Province</label>
-                <select className="input" value={selectedProvince} onChange={e => {
-                  setSelectedProvince(e.target.value); set('province', e.target.value);
-                  setSelectedDistrict(''); set('district', ''); set('gnDivisionName', ''); set('gnDivisionCode', '');
-                }}>
-                  <option value="">Select Province</option>
-                  {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+          {/* Location — smart picker */}
+          <div className="border-t pt-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
+              📍 Location
+              <span className="text-xs font-normal text-gray-400">(search, use GPS, or drag pin on map)</span>
+            </h3>
+            <LocationPicker
+              placeholder="Search your address in Sri Lanka..."
+              initialAddress={locationData.address}
+              onLocationSelect={(result) => {
+                setLocationData({
+                  address: result.address,
+                  lat: result.lat,
+                  lng: result.lng,
+                  district: result.district || '',
+                  province: result.province || '',
+                });
+              }}
+            />
+
+            {/* Show auto-filled district/province */}
+            {locationData.district && (
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">District (auto-detected)</label>
+                  <input className="input bg-gray-50 text-gray-600" readOnly value={locationData.district} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Province (auto-detected)</label>
+                  <input className="input bg-gray-50 text-gray-600" readOnly value={locationData.province} />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">District</label>
-                <select className="input" value={selectedDistrict} onChange={e => {
-                  setSelectedDistrict(e.target.value); set('district', e.target.value);
-                  set('gnDivisionName', ''); set('gnDivisionCode', '');
-                }} disabled={!selectedProvince}>
-                  <option value="">Select District</option>
-                  {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Grama Niladhari Division</label>
-                <select className="input" value={form.gnDivisionCode} onChange={e => {
-                  const gn = gnDivisions.find(g => g.code === e.target.value);
-                  set('gnDivisionCode', e.target.value); set('gnDivisionName', gn?.name || '');
-                }} disabled={!selectedDistrict}>
-                  <option value="">Select GN Division</option>
-                  {gnDivisions.map(g => <option key={g.code} value={g.code}>{g.name}</option>)}
-                </select>
-              </div>
-            </div>
+            )}
+
+            {/* Manual GN Division entry */}
             <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">Address</label>
-              <input className="input" value={form.address} onChange={e => set('address', e.target.value)} placeholder="No. 42, Main Street, Colombo" />
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Grama Niladhari Division
+                <span className="text-gray-400 font-normal ml-1">(required)</span>
+              </label>
+              <input className="input" value={gnDivisionName}
+                onChange={e => setGnDivisionName(e.target.value)}
+                placeholder="e.g. Colombo Fort, Kandy City..." />
             </div>
           </div>
 

@@ -22,6 +22,7 @@ export default function QuotationForm() {
   const [items, setItems] = useState<any[]>([]);
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [isDelivery, setIsDelivery] = useState(false);
+  const [fulfillmentType, setFulfillmentType] = useState<'delivery' | 'pickup'>('pickup');
   const [estimatedTime, setEstimatedTime] = useState('2–4 hours');
   const [notes, setNotes] = useState('');
   const [autoMatchRate, setAutoMatchRate] = useState<number | null>(null);
@@ -44,7 +45,9 @@ export default function QuotationForm() {
           substitute: '',
           notes: '',
         })));
-        setIsDelivery(data.quotation.pharmacy?.pharmacyProfile?.isDeliveryAvailable || false);
+        const canDeliver = data.quotation.pharmacy?.pharmacyProfile?.isDeliveryAvailable || false;
+        setIsDelivery(canDeliver);
+        setFulfillmentType(canDeliver ? 'delivery' : 'pickup');
       } catch (err: any) {
         toast.error('Quotation not found');
         navigate(-1);
@@ -94,7 +97,7 @@ export default function QuotationForm() {
   const removeItem = (i: number) => setItems(prev => prev.filter((_, idx) => idx !== i));
 
   const subtotal = items.reduce((s, i) => s + (i.available ? Number(i.totalPrice || 0) : 0), 0);
-  const total = subtotal + (isDelivery ? Number(deliveryFee) : 0);
+  const total = subtotal + (fulfillmentType === 'delivery' ? Number(deliveryFee) : 0);
 
   const submit = async () => {
     const missingPrices = items.filter(i => i.available && Number(i.unitPrice) <= 0);
@@ -106,8 +109,9 @@ export default function QuotationForm() {
     try {
       await quotationAPI.submit(id!, {
         items,
-        deliveryFee: isDelivery ? Number(deliveryFee) : 0,
-        isDeliveryAvailable: isDelivery,
+        deliveryFee: fulfillmentType === 'delivery' ? Number(deliveryFee) : 0,
+        isDeliveryAvailable: fulfillmentType === 'delivery',
+        fulfillmentType,
         estimatedTime,
         notes,
       });
@@ -333,19 +337,44 @@ export default function QuotationForm() {
             </div>
           </div>
 
-          {/* Delivery & extras */}
+          {/* Fulfillment & extras */}
           <div className="card space-y-4">
-            <h3 className="font-semibold">Delivery & Details</h3>
+            <h3 className="font-semibold">Fulfillment Options</h3>
 
-            <div className="flex items-center gap-3">
-              <input type="checkbox" id="delivery" checked={isDelivery}
-                onChange={e => setIsDelivery(e.target.checked)} className="w-4 h-4 accent-primary-600" />
-              <label htmlFor="delivery" className="flex items-center gap-1.5 text-sm font-medium cursor-pointer">
-                <Truck className="w-4 h-4 text-primary-600" /> Offer Delivery
-              </label>
+            {/* Fulfillment type selector */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-2 block">How will the patient receive medicines?</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button type="button"
+                  onClick={() => { setFulfillmentType('delivery'); setIsDelivery(true); }}
+                  className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    fulfillmentType === 'delivery'
+                      ? 'border-primary-500 bg-primary-50 text-primary-700'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}>
+                  <Truck className="w-4 h-4" />
+                  <div className="text-left">
+                    <p className="font-semibold">Delivery</p>
+                    <p className="text-xs font-normal opacity-70">We deliver to patient</p>
+                  </div>
+                </button>
+                <button type="button"
+                  onClick={() => { setFulfillmentType('pickup'); setIsDelivery(false); setDeliveryFee(0); }}
+                  className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all text-sm font-medium ${
+                    fulfillmentType === 'pickup'
+                      ? 'border-teal-500 bg-teal-50 text-teal-700'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}>
+                  <Package className="w-4 h-4" />
+                  <div className="text-left">
+                    <p className="font-semibold">Pickup</p>
+                    <p className="text-xs font-normal opacity-70">Patient collects in store</p>
+                  </div>
+                </button>
+              </div>
             </div>
 
-            {isDelivery && (
+            {fulfillmentType === 'delivery' && (
               <div>
                 <label className="text-xs text-gray-500">Delivery Fee (LKR)</label>
                 <input type="number" min={0} className="input mt-0.5 w-40"
@@ -371,7 +400,7 @@ export default function QuotationForm() {
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span><span>LKR {subtotal.toFixed(2)}</span>
               </div>
-              {isDelivery && <div className="flex justify-between text-gray-600">
+              {fulfillmentType === 'delivery' && deliveryFee > 0 && <div className="flex justify-between text-gray-600">
                 <span>Delivery</span><span>LKR {Number(deliveryFee).toFixed(2)}</span>
               </div>}
               <div className="flex justify-between font-bold text-base border-t pt-2">

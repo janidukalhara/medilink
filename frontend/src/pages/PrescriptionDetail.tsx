@@ -12,6 +12,7 @@ import { useSocket } from '../context/SocketContext';
 import StatusBadge from '../components/shared/StatusBadge';
 import ExtractionResult from '../components/patient/ExtractionResult';
 import PharmacySelector from '../components/patient/PharmacySelector';
+import QuotationComparison from '../components/patient/QuotationComparison';
 import ChatBox from '../components/shared/ChatBox';
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import { format } from 'date-fns';
@@ -54,6 +55,7 @@ export default function PrescriptionDetail() {
   const [requesting, setRequesting]           = useState(false);
   const [accepting, setAccepting]             = useState<string | null>(null);
   const [completing, setCompleting]           = useState<string | null>(null);
+  const [switchingFulfillment, setSwitchingFulfillment] = useState<string | null>(null);
   const [tab, setTab]                         = useState<'info' | 'quotes' | 'chat'>('info');
   const [selectedPharmacies, setSelectedPharmacies] = useState<string[]>([]);
   const [activeChat, setActiveChat]           = useState<{ id: string; name: string } | null>(null);
@@ -301,7 +303,7 @@ export default function PrescriptionDetail() {
                 <MapPin className="w-4 h-4 text-primary-500" /> Select Pharmacies
               </h3>
               <p className="text-xs text-gray-400 mb-3">Choose pharmacies to receive your prescription.</p>
-              <PharmacySelector onSelectionChange={setSelectedPharmacies} />
+              <PharmacySelector prescriptionId={id!} onSelectionChange={setSelectedPharmacies} />
               <button onClick={requestQuotes} disabled={requesting || !selectedPharmacies.length}
                 className="btn-primary w-full py-3 mt-4 font-semibold flex items-center justify-center gap-2">
                 {requesting
@@ -331,6 +333,28 @@ export default function PrescriptionDetail() {
             </div>
           )}
 
+          {/* Quotation Comparison System */}
+          {quotations.filter(q => q.orderStatus === 'submitted').length > 1 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                🏆 Compare & Choose Best Quote
+                <span className="text-xs font-normal text-gray-400">({quotations.filter(q => q.orderStatus === 'submitted').length} quotes received)</span>
+              </h3>
+              <QuotationComparison
+                quotations={quotations}
+                onAccept={async (qId) => {
+                  setAccepting(qId);
+                  try {
+                    await quotationAPI.accept(qId);
+                    toast.success('Quotation accepted!');
+                    loadData();
+                  } catch (err: any) {
+                    toast.error(err.response?.data?.error || 'Failed to accept');
+                  } finally { setAccepting(null); }
+                }}
+              />
+            </div>
+          )}
           {quotations.map(q => {
             const isSelected  = ['accepted','confirmed','preparing','dispatched','delivered',
                                   'pickup_ready','picked_up','completed'].includes(q.orderStatus);
@@ -405,6 +429,55 @@ export default function PrescriptionDetail() {
                 </div>
 
                 {q.notes && <p className="text-xs text-gray-400 italic mb-3">"{q.notes}"</p>}
+
+                {/* Fulfillment switch — available on accepted/confirmed delivery quotes */}
+                {isPatient && isSelected && !isCompleted &&
+                 q.isDeliveryAvailable &&
+                 ['accepted', 'confirmed'].includes(q.orderStatus) && (
+                  <div className="mb-3">
+                    {q.fulfillmentType !== 'pickup' ? (
+                      <button
+                        onClick={async () => {
+                          setSwitchingFulfillment(q._id);
+                          try {
+                            await quotationAPI.changeFulfillment(q._id, 'pickup');
+                            toast.success('Switched to pickup — delivery fee removed!');
+                            loadData();
+                          } catch (err: any) {
+                            toast.error(err.response?.data?.error || 'Could not change fulfillment');
+                          } finally { setSwitchingFulfillment(null); }
+                        }}
+                        disabled={switchingFulfillment === q._id}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-teal-400 text-teal-700 bg-teal-50 hover:bg-teal-100 text-sm font-medium transition-all disabled:opacity-50"
+                      >
+                        {switchingFulfillment === q._id
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Switching...</>
+                          : <>🏪 Switch to Pickup {q.deliveryFee > 0 ? `— save LKR ${q.deliveryFee?.toFixed(0)}` : ''}</>
+                        }
+                      </button>
+                    ) : (
+                      <button
+                        onClick={async () => {
+                          setSwitchingFulfillment(q._id);
+                          try {
+                            await quotationAPI.changeFulfillment(q._id, 'delivery');
+                            toast.success('Switched back to delivery');
+                            loadData();
+                          } catch (err: any) {
+                            toast.error(err.response?.data?.error || 'Could not change fulfillment');
+                          } finally { setSwitchingFulfillment(null); }
+                        }}
+                        disabled={switchingFulfillment === q._id}
+                        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 text-sm font-medium transition-all disabled:opacity-50"
+                      >
+                        {switchingFulfillment === q._id
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Switching...</>
+                          : <>🚚 Switch to Delivery instead</>
+                        }
+                      </button>
+                    )}
+                  </div>
+                )}
 
                 {/* Action buttons */}
                 <div className="flex gap-2 flex-wrap">
