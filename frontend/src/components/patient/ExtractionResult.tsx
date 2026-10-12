@@ -14,6 +14,7 @@ interface Medicine {
 interface PatientInfo { name?: string; age?: number; gender?: string; }
 interface DoctorInfo { name?: string; reg_no?: string; hospital?: string; }
 interface WritingStyle {
+  word_count?: number;
   style?: string; avg_confidence?: number; readability?: string; is_handwritten?: boolean;
 }
 

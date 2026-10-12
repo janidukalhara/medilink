@@ -1,5 +1,6 @@
+import AuthFrame from '../shared/AuthFrame';
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Activity } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { authAPI } from '../../services/api';
@@ -9,7 +10,8 @@ type Role = 'patient' | 'pharmacy';
 
 export default function RegisterForm() {
   const navigate = useNavigate();
-  const [role, setRole] = useState<Role>('patient');
+  const [searchParams] = useSearchParams();
+  const [role, setRole] = useState<Role>(searchParams.get('role') === 'pharmacy' ? 'pharmacy' : 'patient');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -90,8 +92,8 @@ export default function RegisterForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-8">
+    <AuthFrame register>
+      <div className="auth-form">
         <div className="flex items-center justify-center gap-2 mb-6">
           <div className="w-10 h-10 bg-primary-600 rounded-xl flex items-center justify-center">
             <Activity className="w-6 h-6 text-white" />
@@ -99,40 +101,40 @@ export default function RegisterForm() {
           <span className="font-display font-bold text-2xl text-primary-700">MediLink</span>
         </div>
 
-        <h2 className="text-2xl font-display font-bold text-center text-gray-900 mb-2">Create Account</h2>
-        <p className="text-center text-gray-500 text-sm mb-6">Join MediLink to manage prescriptions smartly</p>
+        <span className="eyebrow">LET’S MAKE CARE SIMPLER</span><h1 className="auth-heading">Your next step<br />starts here.</h1>
+        <p className="text-center text-gray-500 text-sm mb-6">Create an account for your care journey.</p>
 
         {/* Role Toggle */}
         <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
           {(['patient', 'pharmacy'] as Role[]).map(r => (
-            <button key={r} type="button" onClick={() => setRole(r)}
+            <button key={r} type="button" aria-pressed={role === r} onClick={() => setRole(r)}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all capitalize ${role === r ? 'bg-white text-primary-700 shadow-sm' : 'text-gray-600'}`}>
-              {r === 'patient' ? '🧑 Patient' : '🏥 Pharmacy'}
+              {r === 'patient' ? 'I’m a patient' : 'I’m a pharmacy'}
             </button>
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form aria-busy={loading} onSubmit={handleSubmit} className="space-y-5">
           {/* Basic info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
-              <input className="input" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="John Perera" />
+              <label htmlFor="registerform-field-1" className="block text-xs font-medium text-gray-700 mb-1">Full Name *</label>
+              <input id="registerform-field-1" className="input" required value={form.name} onChange={e => set('name', e.target.value)} placeholder="John Perera" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
-              <input className="input" type="email" required value={form.email} onChange={e => set('email', e.target.value)} placeholder="john@example.com" />
+              <label htmlFor="registerform-field-2" className="block text-xs font-medium text-gray-700 mb-1">Email *</label>
+              <input id="registerform-field-2" className="input" type="email" required value={form.email} onChange={e => set('email', e.target.value)} placeholder="john@example.com" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
-              <input className="input" required value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+94771234567" />
+              <label htmlFor="registerform-field-3" className="block text-xs font-medium text-gray-700 mb-1">Phone *</label>
+              <input id="registerform-field-3" className="input" required value={form.phone} onChange={e => set('phone', e.target.value)} placeholder="+94771234567" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
+              <label htmlFor="registerform-field-4" className="block text-xs font-medium text-gray-700 mb-1">Password *</label>
               <div className="relative">
-                <input className="input pr-10" type={showPass ? 'text' : 'password'} required minLength={6}
+                <input id="registerform-field-4" className="input pr-10" type={showPass ? 'text' : 'password'} required minLength={6}
                   value={form.password} onChange={e => set('password', e.target.value)} placeholder="Min 6 characters" />
-                <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5">
+                <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? 'Hide password' : 'Show password'} aria-pressed={showPass} className="password-toggle">
                   {showPass ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
                 </button>
               </div>
@@ -143,12 +145,12 @@ export default function RegisterForm() {
           {role === 'patient' && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
-                <input className="input" type="date" value={form.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)} />
+                <label htmlFor="registerform-field-5" className="block text-xs font-medium text-gray-700 mb-1">Date of Birth</label>
+                <input id="registerform-field-5" className="input" type="date" value={form.dateOfBirth} onChange={e => set('dateOfBirth', e.target.value)} />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
-                <select className="input" value={form.gender} onChange={e => set('gender', e.target.value)}>
+                <label htmlFor="registerform-field-6" className="block text-xs font-medium text-gray-700 mb-1">Gender</label>
+                <select id="registerform-field-6" className="input" value={form.gender} onChange={e => set('gender', e.target.value)}>
                   <option value="">Select</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
@@ -161,16 +163,16 @@ export default function RegisterForm() {
           {role === 'pharmacy' && (
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">License Number *</label>
-                <input className="input" required value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} placeholder="PH/LIC/2024/001" />
+                <label htmlFor="registerform-field-7" className="block text-xs font-medium text-gray-700 mb-1">License Number *</label>
+                <input id="registerform-field-7" className="input" required value={form.licenseNumber} onChange={e => set('licenseNumber', e.target.value)} placeholder="PH/LIC/2024/001" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Registration No.</label>
-                <input className="input" value={form.registrationNumber} onChange={e => set('registrationNumber', e.target.value)} placeholder="REG001" />
+                <label htmlFor="registerform-field-8" className="block text-xs font-medium text-gray-700 mb-1">Registration No.</label>
+                <input id="registerform-field-8" className="input" value={form.registrationNumber} onChange={e => set('registrationNumber', e.target.value)} placeholder="REG001" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Open Hours</label>
-                <input className="input" value={form.openHours} onChange={e => set('openHours', e.target.value)} placeholder="8:00 AM - 10:00 PM" />
+                <label htmlFor="registerform-field-9" className="block text-xs font-medium text-gray-700 mb-1">Open Hours</label>
+                <input id="registerform-field-9" className="input" value={form.openHours} onChange={e => set('openHours', e.target.value)} placeholder="8:00 AM - 10:00 PM" />
               </div>
               <div className="flex items-center gap-2 pt-5">
                 <input type="checkbox" id="delivery" checked={form.isDeliveryAvailable}
@@ -178,8 +180,8 @@ export default function RegisterForm() {
                 <label htmlFor="delivery" className="text-sm text-gray-700">Delivery Available</label>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
-                <textarea className="input resize-none" rows={2} value={form.description}
+                <label htmlFor="registerform-field-10" className="block text-xs font-medium text-gray-700 mb-1">Description</label>
+                <textarea id="registerform-field-10" className="input resize-none" rows={2} value={form.description}
                   onChange={e => set('description', e.target.value)} placeholder="Brief description of your pharmacy..." />
               </div>
             </div>
@@ -209,23 +211,23 @@ export default function RegisterForm() {
             {locationData.district && (
               <div className="mt-3 grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">District (auto-detected)</label>
-                  <input className="input bg-gray-50 text-gray-600" readOnly value={locationData.district} />
+                  <label htmlFor="registerform-field-11" className="block text-xs font-medium text-gray-500 mb-1">District (auto-detected)</label>
+                  <input id="registerform-field-11" className="input bg-gray-50 text-gray-600" readOnly value={locationData.district} />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Province (auto-detected)</label>
-                  <input className="input bg-gray-50 text-gray-600" readOnly value={locationData.province} />
+                  <label htmlFor="registerform-field-12" className="block text-xs font-medium text-gray-500 mb-1">Province (auto-detected)</label>
+                  <input id="registerform-field-12" className="input bg-gray-50 text-gray-600" readOnly value={locationData.province} />
                 </div>
               </div>
             )}
 
             {/* Manual GN Division entry */}
             <div className="mt-3">
-              <label className="block text-xs font-medium text-gray-700 mb-1">
+              <label htmlFor="registerform-field-13" className="block text-xs font-medium text-gray-700 mb-1">
                 Grama Niladhari Division
                 <span className="text-gray-400 font-normal ml-1">(required)</span>
               </label>
-              <input className="input" value={gnDivisionName}
+              <input id="registerform-field-13" className="input" value={gnDivisionName}
                 onChange={e => setGnDivisionName(e.target.value)}
                 placeholder="e.g. Colombo Fort, Kandy City..." />
             </div>
@@ -241,6 +243,6 @@ export default function RegisterForm() {
           <Link to="/login" className="text-primary-600 font-medium hover:underline">Sign in</Link>
         </p>
       </div>
-    </div>
+    </AuthFrame>
   );
 }

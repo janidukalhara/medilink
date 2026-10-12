@@ -37,9 +37,9 @@ export default function StatusBadge({ status, showIcon = true, size = 'sm' }: Pr
   };
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-medium
+    <span className={`status-badge inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-medium
       ${size === 'sm' ? 'text-xs' : 'text-sm'} ${cfg.color}`}>
-      {showIcon && <span className="text-[10px]">{cfg.icon}</span>}
+      {showIcon && <span aria-hidden="true" className={`status-indicator ${status === 'processing' ? 'is-processing' : ''}`} />}
       {cfg.label}
     </span>
   );

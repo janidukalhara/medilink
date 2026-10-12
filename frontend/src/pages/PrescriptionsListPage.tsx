@@ -33,7 +33,7 @@ export default function PrescriptionsListPage() {
 
       <div className="flex gap-2 flex-wrap mb-4">
         {['', 'processing', 'extracted', 'quote_requested', 'quotes_received', 'accepted', 'delivered'].map(s => (
-          <button key={s} onClick={() => setStatus(s)}
+          <button key={s} aria-pressed={status === s} onClick={() => setStatus(s)}
             className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${status === s ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-600 border-gray-200 hover:border-primary-400'}`}>
             {s === '' ? 'All' : s.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
           </button>

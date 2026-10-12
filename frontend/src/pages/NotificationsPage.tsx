@@ -1,3 +1,4 @@
+import LoadingSpinner from '../components/shared/LoadingSpinner';
 import React, { useState, useEffect } from 'react';
 import { Bell, Check, CheckCheck } from 'lucide-react';
 import { notificationAPI } from '../services/api';
@@ -48,7 +49,7 @@ export default function NotificationsPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-10 text-gray-400">Loading...</div>
+        <div className="text-center py-10"><LoadingSpinner size="lg" /></div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-16">
           <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -57,9 +58,10 @@ export default function NotificationsPage() {
       ) : (
         <div className="space-y-2">
           {notifications.map(n => (
-            <div key={n._id}
+            <button type="button" key={n._id}
+              aria-label={`${n.title}${n.isRead ? '' : ', mark as read'}`}
               onClick={() => !n.isRead && markRead(n._id)}
-              className={`p-4 rounded-xl border cursor-pointer transition-colors ${n.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'}`}>
+              className={`w-full text-left p-5 rounded-2xl border cursor-pointer transition-colors ${n.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'}`}>
               <div className="flex items-start gap-3">
                 <span className="text-2xl">{typeIcon[n.type] || '🔔'}</span>
                 <div className="flex-1 min-w-0">
@@ -71,7 +73,7 @@ export default function NotificationsPage() {
                   <p className="text-xs text-gray-400 mt-1">{format(new Date(n.createdAt), 'MMM d, h:mm a')}</p>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       )}

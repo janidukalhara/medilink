@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, FileImage, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileImage, X, Loader2, CheckCircle, AlertCircle, ScanLine } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { prescriptionAPI } from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
@@ -92,7 +92,7 @@ export default function PrescriptionUpload({ onSuccess }: Props) {
             {preview ? (
               <div className="relative inline-block">
                 <img src={preview} alt="Preview" className="max-h-48 mx-auto rounded-lg shadow" />
-                <button onClick={e => { e.stopPropagation(); reset(); }}
+                <button aria-label="Remove selected prescription" onClick={e => { e.stopPropagation(); reset(); }}
                   className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1">
                   <X className="w-3 h-3" />
                 </button>
@@ -117,8 +117,8 @@ export default function PrescriptionUpload({ onSuccess }: Props) {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
-            <textarea
+            <label htmlFor="prescription-notes" className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <textarea id="prescription-notes"
               className="input resize-none" rows={2}
               placeholder="Any special instructions for the pharmacist..."
               value={notes} onChange={e => setNotes(e.target.value)}
@@ -136,18 +136,20 @@ export default function PrescriptionUpload({ onSuccess }: Props) {
           </button>
         </>
       ) : status === 'uploading' || status === 'processing' ? (
-        <div className="text-center py-12">
-          <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
+        <div className="processing-panel" role="status" aria-live="polite">
+          <div className="processing-orbit"><ScanLine className="w-9 h-9 text-primary-600" /></div>
           <h3 className="text-lg font-semibold text-gray-800">
-            {status === 'uploading' ? 'Uploading prescription...' : '🤖 AI is analyzing your prescription...'}
+            {status === 'uploading' ? 'Uploading prescription...' : 'Reading your prescription…'}
           </h3>
           <p className="text-sm text-gray-500 mt-1">
-            {status === 'uploading' ? 'Please wait' : 'Running OCR + NLP extraction. This may take up to 30 seconds.'}
+            {status === 'uploading' ? 'Please wait' : 'We’re preparing the medicine details for your review. This may take a moment.'}
           </p>
+          <div className="processing-track" aria-hidden="true"><span /></div>
+          <div className="processing-steps"><span className={status === 'uploading' ? 'active' : ''}>01 Upload</span><i /><span className={status === 'processing' ? 'active' : ''}>02 Read</span><i /><span>03 Review</span></div>
           {status === 'processing' && (
             <div className="mt-4 space-y-2 text-sm text-gray-600">
               <div className="flex items-center justify-center gap-2"><CheckCircle className="w-4 h-4 text-green-500" /> Image uploaded successfully</div>
-              <div className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 text-primary-500 animate-spin" /> Running OCR extraction...</div>
+              <div className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 text-primary-500 animate-spin" /> Reading medicine details…</div>
             </div>
           )}
         </div>

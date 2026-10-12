@@ -43,9 +43,10 @@ export default function PatientDashboard() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="workspace-welcome">
         <div>
-          <h1 className="text-2xl font-display font-bold text-gray-900">Good day, {user?.name?.split(' ')[0]}! 👋</h1>
+          <span className="eyebrow">YOUR HEALTH, A LITTLE MORE ORGANISED</span>
+          <h1 className="text-2xl font-display font-bold text-gray-900">Good day, {user?.name?.split(' ')[0]}!</h1>
           <p className="text-gray-500 text-sm mt-0.5">Manage your prescriptions and track orders</p>
         </div>
         <Link to="/patient/upload" className="btn-primary flex items-center gap-2">
