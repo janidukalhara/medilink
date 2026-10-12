@@ -112,7 +112,7 @@ export default function PharmacyDashboard() {
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-display font-bold">Welcome, {user?.name}! 🏥</h1>
+        <span className="eyebrow">YOUR COMMUNITY. YOUR CARE WORKSPACE.</span><h1 className="text-2xl font-display font-bold">Welcome, {user?.name}!</h1>
         <p className="text-sm text-gray-500">Pharmacy dashboard · Manage requests and orders</p>
       </div>
 

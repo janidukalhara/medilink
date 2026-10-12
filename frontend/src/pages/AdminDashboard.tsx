@@ -239,7 +239,7 @@ export default function AdminDashboard() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
       <div>
-        <h1 className="text-2xl font-display font-bold">Admin Panel</h1>
+        <span className="eyebrow">MEDILINK / PLATFORM OVERVIEW</span><h1 className="text-2xl font-display font-bold">Admin Panel</h1>
         <p className="text-gray-500 text-sm">MediLink Platform Management</p>
       </div>
 
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
               { label: 'Prescriptions', value: stats?.totalPrescriptions, icon: Activity, color: 'bg-purple-50 text-purple-600' },
               { label: 'OCR Accuracy', value: `${stats?.avgOCRConfidence}%`, icon: ShieldCheck, color: 'bg-green-50 text-green-600' },
             ].map(s => (
-              <div key={s.label} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
+              <div key={s.label} className="card p-4 flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${s.color}`}><s.icon className="w-5 h-5" /></div>
                 <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-gray-500">{s.label}</p></div>
               </div>
@@ -281,7 +281,7 @@ export default function AdminDashboard() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="card p-5">
               <h2 className="font-semibold mb-4">Activity</h2>
               <div className="space-y-3">
                 {[
@@ -299,7 +299,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Pending approvals quick action */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-5">
+            <div className="card p-5">
               <h2 className="font-semibold mb-4 flex items-center gap-2">
                 Pending Approvals
                 {pendingPharmacies.length > 0 && (

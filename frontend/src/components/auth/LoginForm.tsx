@@ -1,3 +1,4 @@
+import AuthFrame from '../shared/AuthFrame';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Activity } from 'lucide-react';
@@ -24,8 +25,8 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-teal-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+    <AuthFrame>
+      <div className="auth-form">
         <div className="flex items-center justify-center gap-2 mb-8">
           <div className="w-12 h-12 bg-primary-600 rounded-xl flex items-center justify-center">
             <Activity className="w-7 h-7 text-white" />
@@ -33,27 +34,27 @@ export default function LoginForm() {
           <span className="font-display font-bold text-3xl text-primary-700">MediLink</span>
         </div>
 
-        <h2 className="text-2xl font-display font-bold text-center mb-1">Welcome back</h2>
-        <p className="text-center text-gray-500 text-sm mb-8">Sign in to your MediLink account</p>
+        <span className="eyebrow">YOUR CARE WORKSPACE</span><h1 className="auth-heading">Good to have<br />you back.</h1>
+        <p className="text-center text-gray-500 text-sm mb-8">Sign in to pick up where you left off.</p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form aria-busy={loading} onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              className="input" type="email" required
+            <label htmlFor="loginform-field-1" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="loginform-field-1"
+              autoComplete="email" className="input" type="email" required
               value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
               placeholder="your@email.com"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label htmlFor="loginform-field-2" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <div className="relative">
-              <input
-                className="input pr-10" type={showPass ? 'text' : 'password'} required
+              <input id="loginform-field-2"
+                autoComplete="current-password" className="input pr-10" type={showPass ? 'text' : 'password'} required
                 value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                 placeholder="Your password"
               />
-              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-2.5">
+              <button type="button" onClick={() => setShowPass(!showPass)} aria-label={showPass ? 'Hide password' : 'Show password'} aria-pressed={showPass} className="password-toggle">
                 {showPass ? <EyeOff className="w-4 h-4 text-gray-400" /> : <Eye className="w-4 h-4 text-gray-400" />}
               </button>
             </div>
@@ -74,6 +75,6 @@ export default function LoginForm() {
           <Link to="/register" className="text-primary-600 font-medium hover:underline">Create one</Link>
         </p>
       </div>
-    </div>
+    </AuthFrame>
   );
 }
