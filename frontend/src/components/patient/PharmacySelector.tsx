@@ -201,8 +201,8 @@ export default function PharmacySelector({ prescriptionId, onSelectionChange, in
                 {group.map(p => {
                   const isSelected = selected.has(p._id);
                   return (
-                    <button key={p._id} onClick={() => togglePharmacy(p._id)}
-                      className={`w-full text-left p-3 rounded-xl border-2 transition-all ${
+                    <button key={p._id} aria-pressed={isSelected} onClick={() => togglePharmacy(p._id)}
+                      className={`surface-panel pharmacy-choice w-full text-left p-3 rounded-xl border-2 transition-all ${
                         isSelected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}>
                       <div className="flex items-start justify-between gap-2">

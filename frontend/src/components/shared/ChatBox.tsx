@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useReducedMotion } from 'framer-motion';
+import LoadingSpinner from './LoadingSpinner';
 import { Send, MessageSquare, Loader2 } from 'lucide-react';
 import { useSocket } from '../../context/SocketContext';
 import { chatAPI } from '../../services/api';
@@ -23,13 +25,14 @@ interface Props {
 
 export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, compact }: Props) {
   const { user }  = useAuth();
+  const reducedMotion = useReducedMotion();
   const socket    = useSocket();
   const [messages, setMessages]   = useState<Message[]>([]);
   const [input, setInput]         = useState('');
   const [loading, setLoading]     = useState(true);
   const [sending, setSending]     = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-  const bottomRef   = useRef<HTMLDivElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenIds     = useRef<Set<string>>(new Set()); // dedup guard
 
@@ -91,8 +94,9 @@ export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, comp
 
   // ── Auto-scroll ──────────────────────────────────────────────────────────
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const container = messagesRef.current;
+    container?.scrollTo({ top: container.scrollHeight, behavior: reducedMotion ? 'instant' : 'smooth' });
+  }, [messages, reducedMotion]);
 
   // ── Typing indicator ─────────────────────────────────────────────────────
   const handleInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,11 +170,11 @@ export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, comp
     ({ patient: 'Patient', pharmacy: 'Pharmacy', admin: 'Admin' }[role] ?? role);
 
   return (
-    <div className={`flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white
-      ${compact ? 'h-72' : 'h-[460px]'}`}>
+    <div className={`chat-panel flex flex-col border border-gray-200 rounded-xl overflow-hidden bg-white
+      ${compact ? 'chat-compact' : ''}`}>
 
       {/* Header */}
-      <div className="px-4 py-2.5 bg-gray-50 border-b flex items-center gap-2 flex-shrink-0">
+      <div className="chat-header px-4 py-2.5 bg-gray-50 border-b flex items-center gap-2 flex-shrink-0">
         <MessageSquare className="w-4 h-4 text-primary-500" />
         <span className="text-sm font-semibold text-gray-700">
           {pharmacyName ? `Chat — ${pharmacyName}` : 'Prescription Chat'}
@@ -180,15 +184,15 @@ export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, comp
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div ref={messagesRef} role="log" aria-label="Conversation" aria-live="polite" className="chat-messages flex-1 overflow-y-auto px-4 py-3 space-y-3">
         {loading && (
           <div className="flex justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-primary-400" />
+            <LoadingSpinner />
           </div>
         )}
 
         {!loading && messages.length === 0 && (
-          <div className="text-center py-10">
+          <div className="chat-empty text-center py-10">
             <MessageSquare className="w-8 h-8 text-gray-200 mx-auto mb-2" />
             <p className="text-xs text-gray-400">No messages yet. Start the conversation!</p>
           </div>
@@ -205,7 +209,7 @@ export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, comp
                     {msg.sender.name} · {roleLabel(msg.senderRole || msg.sender.role)}
                   </span>
                 )}
-                <div className={`px-3 py-2 text-sm leading-relaxed ${bubbleClass(msg.sender.role, isMe)} ${isTemp ? 'opacity-70' : ''}`}>
+                <div className={`chat-bubble px-3 py-2 text-sm leading-relaxed ${bubbleClass(msg.sender.role, isMe)} ${isTemp ? 'opacity-70' : ''}`}>
                   {msg.content}
                 </div>
                 <span className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
@@ -229,19 +233,19 @@ export default function ChatBox({ prescriptionId, pharmacyId, pharmacyName, comp
             {typingUser} is typing…
           </div>
         )}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
-      <div className="px-3 py-2.5 border-t bg-white flex gap-2 flex-shrink-0">
+      <div className="chat-composer px-3 py-2.5 border-t bg-white flex gap-2 flex-shrink-0">
         <input
           className="input flex-1 text-sm py-2"
-          placeholder="Type a message…"
+          aria-label="Message" placeholder="Type a message…"
           value={input}
           onChange={handleInput}
           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
         />
         <button
+          aria-label="Send message"
           onClick={send}
           disabled={!input.trim() || sending}
           className="btn-primary px-3 py-2 flex items-center justify-center min-w-[40px]"

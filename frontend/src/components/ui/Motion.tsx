@@ -1,3 +1,4 @@
+import ShinyText from "./reactbits/ShinyText";
 import { ReactNode, useRef } from "react";
 import {
   motion,
@@ -73,7 +74,7 @@ export function AnimatedHeading({ text }: { text: string }) {
               ease: [0.22, 1, 0.36, 1],
             }}
           >
-            {word}&nbsp;
+            <ShinyText>{word}&nbsp;</ShinyText>
           </motion.span>
         </span>
       ))}
