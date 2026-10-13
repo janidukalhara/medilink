@@ -193,7 +193,7 @@ export default function PrescriptionDetail() {
 
       {/* ── Order progress tracker ── */}
       {isActiveOrder && (
-        <div className="card mb-4">
+        <div className="card order-progress mb-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
             Order Progress · {fulfillmentType === 'pickup' ? '🏪 Pickup' : '🚚 Delivery'}
           </p>
@@ -532,7 +532,7 @@ export default function PrescriptionDetail() {
                   <p className="text-xs text-gray-400 font-medium">Select a pharmacy to chat with:</p>
                   {quotations.map(q => (
                     <button key={q._id} onClick={() => setActiveChat({ id: q.pharmacy._id, name: q.pharmacy.name })}
-                      className="w-full text-left p-3.5 bg-white border border-gray-200 hover:border-primary-300 rounded-xl flex items-center justify-between transition-all">
+                      className="surface-panel interactive-row w-full text-left p-3.5 bg-white border border-gray-200 hover:border-primary-300 rounded-xl flex items-center justify-between transition-all">
                       <div>
                         <p className="font-medium text-sm text-gray-800">{q.pharmacy.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">

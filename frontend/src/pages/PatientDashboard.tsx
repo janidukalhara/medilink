@@ -62,7 +62,7 @@ export default function PatientDashboard() {
           { label: 'Quotes Ready', value: statusMap['quotes_received'] || 0, icon: TrendingUp, color: 'bg-purple-50 text-purple-600' },
           { label: 'Delivered', value: statusMap['delivered'] || 0, icon: CheckCircle, color: 'bg-green-50 text-green-600' },
         ].map(stat => (
-          <div key={stat.label} className="card flex items-center gap-3">
+          <div key={stat.label} className="card stat-card flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${stat.color}`}>
               <stat.icon className="w-5 h-5" />
             </div>

@@ -14,6 +14,8 @@ import HomePage from "./pages/Homepage";
 import Navbar from "./components/shared/Navbar";
 import LoadingSpinner from "./components/shared/LoadingSpinner";
 
+const AmbientBackground = lazy(() => import("./components/ui/AmbientBackground"));
+
 // Auth
 const LoginForm = lazy(() => import("./components/auth/LoginForm"));
 const RegisterForm = lazy(() => import("./components/auth/RegisterForm"));
@@ -113,10 +115,11 @@ export default function App() {
       <AuthProvider>
         <SocketProvider>
           <BrowserRouter>
+            <Suspense fallback={null}><AmbientBackground /></Suspense>
             <ScrollToLocation />
             <Toaster
               position="top-right"
-              toastOptions={{ duration: 4500, style: { fontSize: "14px" } }}
+              toastOptions={{ duration: 4500, className: "care-toast", style: { fontSize: "14px" } }}
             />
             <Suspense
               fallback={

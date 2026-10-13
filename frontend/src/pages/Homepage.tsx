@@ -20,6 +20,8 @@ import {
   Reveal,
 } from "../components/ui/Motion";
 
+import ShinyText from "../components/ui/reactbits/ShinyText";
+
 const steps = [
   {
     icon: UploadCloud,
@@ -118,11 +120,11 @@ export default function HomePage() {
           <Reveal className="section-heading">
             <div>
               <span className="eyebrow">01 / A LITTLE SIMPLER</span>
-              <h2>
+              <h2><ShinyText>
                 Less back and forth.
                 <br />
                 <span className="serif-accent">More moving forward.</span>
-              </h2>
+              </ShinyText></h2>
             </div>
             <p>
               Three thoughtful steps that bring your prescription, your
@@ -138,7 +140,7 @@ export default function HomePage() {
                   </span>
                   <span className="step-number">0{i + 1}</span>
                 </div>
-                <h3>{step.title}</h3>
+                <h3><ShinyText>{step.title}</ShinyText></h3>
                 <p>{step.text}</p>
                 <span className="journey-line" />
               </Reveal>
@@ -149,11 +151,11 @@ export default function HomePage() {
           <div className="section-wrap platform-grid">
             <Reveal>
               <span className="eyebrow">02 / THOUGHTFULLY CONNECTED</span>
-              <h2>
+              <h2><ShinyText>
                 Technology that helps.
                 <br />
                 <span className="serif-accent">Care that feels human.</span>
-              </h2>
+              </ShinyText></h2>
               <p className="section-copy">
                 Keep the important details together, so you can focus on what
                 matters. MediLink supports the journey from reading your
@@ -190,7 +192,7 @@ export default function HomePage() {
                     <feature.icon strokeWidth={1.4} />
                   </span>
                   <div>
-                    <h3>{feature.title}</h3>
+                    <h3><ShinyText>{feature.title}</ShinyText></h3>
                     <p>{feature.text}</p>
                   </div>
                   <ArrowUpRight size={18} />
@@ -209,11 +211,11 @@ export default function HomePage() {
             <span className="eyebrow">
               03 / FOR THE PEOPLE BEHIND THE COUNTER
             </span>
-            <h2>
+            <h2><ShinyText>
               Your expertise.
               <br />
               <span className="serif-accent">A little more reach.</span>
-            </h2>
+            </ShinyText></h2>
             <p>
               Bring your pharmacy closer to your community. Receive prescription
               requests, prepare quotations, and keep your inventory organised in
@@ -235,9 +237,9 @@ export default function HomePage() {
           <Reveal className="section-heading">
             <div>
               <span className="eyebrow">A FEW THINGS YOU MIGHT WONDER</span>
-              <h2>
+              <h2><ShinyText>
                 A little more <span className="serif-accent">clarity.</span>
-              </h2>
+              </ShinyText></h2>
             </div>
           </Reveal>
           <div className="faq-grid">
@@ -272,11 +274,11 @@ export default function HomePage() {
         <section className="care-cta section-wrap">
           <Reveal>
             <span className="eyebrow">YOUR NEXT STEP STARTS HERE</span>
-            <h2>
+            <h2><ShinyText shineColor="#ffffff">
               A simpler way
               <br />
               <span className="serif-accent">to take care.</span>
-            </h2>
+            </ShinyText></h2>
             <Link to="/register" className="button-mint">
               Get started with MediLink <ArrowUpRight size={20} />
             </Link>

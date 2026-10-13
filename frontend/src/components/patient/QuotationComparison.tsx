@@ -146,10 +146,10 @@ export default function QuotationComparison({ quotations, onAccept }: Props) {
 
         return (
           <div key={q._id}
-            className={`rounded-2xl border-2 transition-all ${isBest ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
+            data-recommended={isBest} className={`surface-panel quote-comparison rounded-2xl border-2 transition-all ${isBest ? 'border-green-400 shadow-md' : 'border-gray-200'}`}>
 
             {/* Header */}
-            <div className={`px-4 py-3 rounded-t-2xl flex items-center justify-between ${isBest ? 'bg-green-50' : 'bg-gray-50'}`}>
+            <div className={`quote-header px-4 py-3 rounded-t-2xl flex items-center justify-between flex-wrap gap-3 ${isBest ? 'bg-green-50' : 'bg-gray-50'}`}>
               <div className="flex items-center gap-2">
                 <span className="text-lg font-bold text-gray-800">#{idx + 1}</span>
                 <span className="font-semibold text-gray-900">{q.pharmacy?.name}</span>

@@ -1,6 +1,6 @@
 import LoadingSpinner from '../components/shared/LoadingSpinner';
 import React, { useState, useEffect } from 'react';
-import { Bell, Check, CheckCheck } from 'lucide-react';
+import { Bell, CheckCheck, ScanLine, Receipt, CheckCircle, Package, Truck, Store, MessageSquare } from 'lucide-react';
 import { notificationAPI } from '../services/api';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -29,15 +29,15 @@ export default function NotificationsPage() {
     setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
   };
 
-  const typeIcon: Record<string, string> = {
-    prescription_processed: '🔬', quote_received: '💰', quote_accepted: '✅',
-    order_confirmed: '📦', order_dispatched: '🚚', order_delivered: '🎉',
-    pharmacy_approved: '🏥', new_message: '💬',
+  const typeIcon: Record<string, typeof Bell> = {
+    prescription_processed: ScanLine, quote_received: Receipt, quote_accepted: CheckCircle,
+    order_confirmed: Package, order_dispatched: Truck, order_delivered: CheckCircle,
+    pharmacy_approved: Store, new_message: MessageSquare,
   };
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="notification-heading flex items-center justify-between mb-4">
         <h1 className="text-xl font-display font-bold flex items-center gap-2">
           <Bell className="w-6 h-6 text-primary-600" /> Notifications
         </h1>
@@ -57,13 +57,13 @@ export default function NotificationsPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {notifications.map(n => (
+          {notifications.map(n => { const Icon = typeIcon[n.type] || Bell; return (
             <button type="button" key={n._id}
               aria-label={`${n.title}${n.isRead ? '' : ', mark as read'}`}
               onClick={() => !n.isRead && markRead(n._id)}
-              className={`w-full text-left p-5 rounded-2xl border cursor-pointer transition-colors ${n.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'}`}>
+              className={`notification-card ${n.isRead ? '' : 'is-unread'} w-full text-left p-5 rounded-2xl border cursor-pointer transition-colors ${n.isRead ? 'bg-white border-gray-100' : 'bg-blue-50 border-blue-100'}`}>
               <div className="flex items-start gap-3">
-                <span className="text-2xl">{typeIcon[n.type] || '🔔'}</span>
+                <span className="notification-icon"><Icon size={20} aria-hidden="true" /></span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className={`font-medium text-sm ${n.isRead ? 'text-gray-700' : 'text-gray-900'}`}>{n.title}</p>
@@ -74,7 +74,7 @@ export default function NotificationsPage() {
                 </div>
               </div>
             </button>
-          ))}
+          ); })}
         </div>
       )}
     </div>

@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { Activity } from "lucide-react";
 export default function Brand({ light = false }: { light?: boolean }) {
   return (
     <Link
@@ -8,7 +7,7 @@ export default function Brand({ light = false }: { light?: boolean }) {
       aria-label="MediLink home"
     >
       <span className="brand-mark">
-        <Activity size={23} strokeWidth={1.8} />
+        <img src="/brand/medilink-mark.webp" width="48" height="48" alt="" />
       </span>
       <span>
         Medi<span className="brand-lightweight">Link</span>

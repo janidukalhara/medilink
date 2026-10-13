@@ -111,7 +111,7 @@ export default function PharmacyDashboard() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
       {/* Header */}
-      <div>
+      <div className="dashboard-intro">
         <span className="eyebrow">YOUR COMMUNITY. YOUR CARE WORKSPACE.</span><h1 className="text-2xl font-display font-bold">Welcome, {user?.name}!</h1>
         <p className="text-sm text-gray-500">Pharmacy dashboard · Manage requests and orders</p>
       </div>
@@ -119,7 +119,7 @@ export default function PharmacyDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map(stat => (
-          <div key={stat.label} className="card flex items-center gap-3">
+          <div key={stat.label} className="card stat-card flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${stat.color}`}>
               <stat.icon className="w-5 h-5" />
             </div>

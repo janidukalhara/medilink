@@ -102,7 +102,7 @@ export default function ExtractionResult({
     <div className="space-y-4">
 
       {/* ── AI Summary Card ── */}
-      <div className="bg-gradient-to-r from-primary-50 to-teal-50 border border-primary-100 rounded-2xl p-5">
+      <div className="surface-panel bg-gradient-to-r from-primary-50 to-teal-50 border border-primary-100 rounded-2xl p-5">
         <div className="flex items-start justify-between mb-3">
           <div>
             <h3 className="font-display font-bold text-lg text-gray-900">AI Extraction Summary</h3>

@@ -17,7 +17,7 @@ function UserDetailModal({ user, onClose }: { user: any; onClose: () => void }) 
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      <div className="surface-panel bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="font-bold text-lg">{user.name}</h2>
@@ -108,7 +108,7 @@ function EditPharmacyModal({ pharmacy, onClose, onSaved }: { pharmacy: any; onCl
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+      <div className="surface-panel bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
         onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between p-5 border-b">
           <h2 className="font-bold text-lg">Edit Pharmacy</h2>
@@ -238,7 +238,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-5">
-      <div>
+      <div className="dashboard-intro">
         <span className="eyebrow">MEDILINK / PLATFORM OVERVIEW</span><h1 className="text-2xl font-display font-bold">Admin Panel</h1>
         <p className="text-gray-500 text-sm">MediLink Platform Management</p>
       </div>
@@ -273,7 +273,7 @@ export default function AdminDashboard() {
               { label: 'Prescriptions', value: stats?.totalPrescriptions, icon: Activity, color: 'bg-purple-50 text-purple-600' },
               { label: 'OCR Accuracy', value: `${stats?.avgOCRConfidence}%`, icon: ShieldCheck, color: 'bg-green-50 text-green-600' },
             ].map(s => (
-              <div key={s.label} className="card p-4 flex items-center gap-3">
+              <div key={s.label} className="card stat-card p-4 flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${s.color}`}><s.icon className="w-5 h-5" /></div>
                 <div><p className="text-xl font-bold">{s.value}</p><p className="text-xs text-gray-500">{s.label}</p></div>
               </div>
@@ -530,7 +530,7 @@ export default function AdminDashboard() {
       {/* Delete confirm */}
       {deleteConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
+          <div className="surface-panel bg-white rounded-2xl shadow-2xl p-6 max-w-sm w-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                 <AlertTriangle className="w-5 h-5 text-red-600" />
